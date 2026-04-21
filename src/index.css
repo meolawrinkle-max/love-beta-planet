@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap');
+
+/* 声明你下载的像素字体 */
+@font-face {
+  font-family: 'MyPixelFont';  /* 自定义一个名字，方便调用 */
+  src: url('./assets/Cubic_11.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+* {
+  font-family: 'MyPixelFont', 'Silkscreen', 'Courier New', monospace !important;
+}
+@import "tailwindcss";
+
+:root {
+  font-family: "Silkscreen", "DotGothic16", "ZCOOL KuaiLe", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: #fff1f2; /* Rose 50 */
+  background-image: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%); /* Rose 50 to Rose 100 */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+  color: #881337; /* Rose 900 */
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.pixel-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.1);
+}
+
+.star-layer {
+  background-image:
+    radial-gradient(2px 2px at 10% 18%, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(2px 2px at 29% 65%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1px 1px at 41% 40%, rgba(255, 255, 255, 0.75), transparent),
+    radial-gradient(2px 2px at 60% 22%, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(1px 1px at 78% 76%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(2px 2px at 89% 33%, rgba(255, 255, 255, 0.92), transparent);
+}

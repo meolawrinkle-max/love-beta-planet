@@ -5,6 +5,7 @@ import galaxyBg from './assets/Pixel Galaxy Wallpaper 2.png'
 import bgmAudioSrc from './assets/Top Barry; INDEcompany - 一半一半.flac'
 import musicIconSrc from './assets/生成透明背景清晰扭蛋机图 (2).png'
 import giftIconSrc from './assets/gift.png'
+import giftAudioSrc from './assets/gift.mp3'
 import mainBgSrc from './assets/v3.png'
 import summaryCardBg from './assets/ppp.png'
 
@@ -259,15 +260,11 @@ function PixelPanel({ title, children, subtitle, headerRight = null, bgStyle = {
   )
 }
 
-function MapModule({ onExpChange }) {
+function MapModule({ onExpChange, openedSpotIds, setOpenedSpotIds, playAudioGlobal, toggleGiftAudio, toggleBgm, playingAudio }) {
   const [selectedSpot, setSelectedSpot] = useState(null)
   const [photoIndex, setPhotoIndex] = useState(0)
   const [typedText, setTypedText] = useState('')
-  const [openedSpotIds, setOpenedSpotIds] = useState(new Set())
   const [showConfetti, setShowConfetti] = useState(false)
-  const [playingAudio, setPlayingAudio] = useState('')
-  const [audioStatus, setAudioStatus] = useState('待机')
-  const audioRef = useRef(null)
 
   const unlockedSpots = useMemo(
     () => worldSpots.filter((spot) => spot.unlocked),
@@ -276,17 +273,7 @@ function MapModule({ onExpChange }) {
   const lockedSpots = useMemo(() => worldSpots.filter((spot) => !spot.unlocked), [])
   const unlockedCount = unlockedSpots.length
   const expCount = openedSpotIds.size
-  const expPercentage = Math.floor((expCount / unlockedCount) * 100)
-
-  useEffect(
-    () => () => {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current = null
-      }
-    },
-    [],
-  )
+  const expPercentage = unlockedCount > 0 ? Math.floor((expCount / unlockedCount) * 100) : 0
 
   useEffect(() => {
     if (!selectedSpot) {
@@ -322,59 +309,16 @@ function MapModule({ onExpChange }) {
   const playSpotAudio = async (spot) => {
     setSelectedSpot(spot)
     setPhotoIndex(0)
-    if (!spot.unlocked) {
-      setAudioStatus('该地点未解锁，暂时不能播放')
-      return
-    }
+    if (!spot.unlocked) return
 
-    setOpenedSpotIds((prev) => new Set(prev).add(spot.id))
-
-    try {
-      if (!audioRef.current) {
-        audioRef.current = new Audio(spot.audioSrc)
-      } else if (audioRef.current.src !== new URL(spot.audioSrc, window.location.href).href) {
-        audioRef.current.pause()
-        audioRef.current = new Audio(spot.audioSrc)
-      }
-
-      audioRef.current.loop = false
-      await audioRef.current.play()
-      setPlayingAudio(spot.name)
-      setAudioStatus(`正在播放：${spot.name}`)
-    } catch {
-      setAudioStatus('音频文件暂未放入 public/audio，当前为演示状态')
-    }
-  }
-
-  const stopAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current.currentTime = 0
-    }
-    setPlayingAudio('')
-    setAudioStatus('已停止')
-  }
-
-  const toggleBgm = async () => {
-    if (playingAudio) {
-      stopAudio()
-      return
-    }
+    setOpenedSpotIds((prev) => {
+      const next = new Set(prev)
+      next.add(spot.id)
+      return next
+    })
     
-    try {
-      if (!audioRef.current) {
-        audioRef.current = new Audio(bgmAudioSrc)
-      } else if (audioRef.current.src !== new URL(bgmAudioSrc, window.location.href).href) {
-        audioRef.current.pause()
-        audioRef.current = new Audio(bgmAudioSrc)
-      }
-      
-      audioRef.current.loop = true
-      await audioRef.current.play()
-      setPlayingAudio('一半一半 (BGM)')
-      setAudioStatus('正在播放：一半一半')
-    } catch (e) {
-      console.error('播放背景音乐失败', e)
+    if (spot.audioSrc) {
+      playAudioGlobal(spot.audioSrc, spot.name, false)
     }
   }
 
@@ -390,29 +334,26 @@ function MapModule({ onExpChange }) {
 
   return (
     <div className="space-y-6 relative">
-      {/* 左下角生日礼物图标 */}
+      {/* 礼物图标 (模块内左下角) */}
       <button 
         type="button"
-        className="absolute bottom-4 left-4 z-40 transition-transform duration-300 hover:scale-110 active:scale-95 cursor-pointer drop-shadow-xl w-20 h-20 sm:w-24 sm:h-24"
-        onClick={() => {
-          // TODO: 将来在此处播放生日祝福语音
-          alert('生日祝福语音待上传！')
-        }}
-        title="点击播放生日祝福"
+        className="absolute bottom-0 left-0 z-40 transition-transform duration-300 hover:scale-110 active:scale-95 cursor-pointer drop-shadow-lg w-20 h-20 sm:w-24 sm:h-24"
+        onClick={toggleGiftAudio}
+        title={playingAudio === '生日祝福' ? "点击停止播放祝福" : "点击播放我的生日祝福"}
       >
         <img 
           src={giftIconSrc} 
           alt="生日礼物" 
-          className="w-full h-full object-contain drop-shadow-md hover:animate-pulse"
+          className={`w-full h-full object-contain drop-shadow-md ${playingAudio === '生日祝福' ? 'animate-pulse' : 'hover:animate-bounce'}`}
         />
       </button>
 
-      {/* 音乐状态图标 (使用自定义图片) */}
+      {/* 音乐播放器 (模块内右下角) */}
       <button 
         type="button"
-        className="absolute bottom-4 right-4 z-40 transition-transform duration-300 hover:scale-110 active:scale-95 cursor-pointer drop-shadow-xl w-20 h-20 sm:w-24 sm:h-24"
+        className="absolute bottom-0 right-0 z-40 transition-transform duration-300 hover:scale-110 active:scale-95 cursor-pointer drop-shadow-lg w-20 h-20 sm:w-24 sm:h-24"
         onClick={toggleBgm}
-        title={playingAudio ? "点击停止播放" : "点击播放背景音乐"}
+        title={playingAudio === 'BGM' ? "点击停止播放 BGM" : "点击播放背景音乐"}
       >
         <img 
           src={musicIconSrc} 
@@ -670,7 +611,7 @@ function MemoryGachaModule() {
         <div className="w-full max-w-xs">
           <p className="text-xs font-semibold tracking-[0.2em] text-white">MEMORY GACHA</p>
           <p className="mt-1 text-sm font-medium text-white">已解锁碎片：{unlockedCount}/{total}</p>
-          <div className="mt-2 h-2 overflow-hidden rounded-full border border-purple-200 bg-purple-50/80">
+          <div className="mt-2 h-2 overflow-hidden rounded-full border border-pink-200 bg-rose-50/80">
             <motion.div
               className="h-full bg-gradient-to-r from-purple-400 via-purple-300 to-purple-200"
               animate={{ width: `${progress}%` }}
@@ -780,7 +721,7 @@ function MemoryGachaModule() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-purple-900/40 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-rose-900/40 backdrop-blur-sm p-4"
           >
             <motion.div
               initial={{ y: 20, scale: 0.9 }}
@@ -801,7 +742,7 @@ function MemoryGachaModule() {
                 <button
                   type="button"
                   onClick={saveToBackpack}
-                  className="rounded-xl border-2 border-purple-200 bg-purple-400 px-5 py-3 text-base font-bold text-white shadow-md hover:bg-purple-500 transition-all font-sans"
+                  className="rounded-xl border-2 border-purple-200 bg-purple-400 px-5 py-3 text-base font-bold text-white shadow-md hover:bg-purple-50 transition-all font-sans"
                 >
                   收回背包
                 </button>
@@ -1178,6 +1119,64 @@ function App() {
   const [activeNav, setActiveNav] = useState('map')
   const [mapExp, setMapExp] = useState({ expCount: 0, unlockedCount: 8, expPercentage: 0 })
 
+  // 全局音频管理
+  const [playingAudio, setPlayingAudio] = useState('')
+  const [audioStatus, setAudioStatus] = useState('待机')
+  const [openedSpotIds, setOpenedSpotIds] = useState(new Set())
+  const audioRef = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+    }
+  }, [])
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+    }
+    setPlayingAudio('')
+    setAudioStatus('已停止')
+  }
+
+  const playAudioGlobal = async (src, name, loop = false) => {
+    try {
+      if (!audioRef.current) {
+        audioRef.current = new Audio(src)
+      } else if (audioRef.current.src !== new URL(src, window.location.href).href) {
+        audioRef.current.pause()
+        audioRef.current = new Audio(src)
+      }
+
+      audioRef.current.loop = loop
+      await audioRef.current.play()
+      setPlayingAudio(name)
+      setAudioStatus(`正在播放：${name}`)
+    } catch (e) {
+      console.error('播放音频失败', e)
+    }
+  }
+
+  const toggleBgm = () => {
+    if (playingAudio === 'BGM') {
+      stopAudio()
+    } else {
+      playAudioGlobal(bgmAudioSrc, 'BGM', true)
+    }
+  }
+
+  const toggleGiftAudio = () => {
+    if (playingAudio === '生日祝福') {
+      stopAudio()
+    } else {
+      playAudioGlobal(giftAudioSrc, '生日祝福', false)
+    }
+  }
+
   if (!hasEntered) {
     return (
       <main 
@@ -1188,26 +1187,34 @@ function App() {
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="pixel-card relative z-10 mx-auto w-full max-w-lg border-4 border-purple-200 bg-purple-100/80 p-8 text-center shadow-[6px_6px_0_rgba(0,0,0,0.25)] sm:p-12"
+          className="pixel-card relative z-10 mx-auto w-full max-w-lg border-4 border-purple-300 bg-purple-100/70 p-8 text-center shadow-2xl sm:p-12"
         >
-          <h1 className="mb-3 text-2xl font-bold text-purple-900 sm:text-3xl leading-relaxed tracking-wider drop-shadow-sm">
-            包包王子<br />欢迎进入β星球
+          <h1 
+            className="mb-4 text-2xl text-[#4c1d95] sm:text-[28px] leading-loose tracking-[0.05em] drop-shadow-sm" 
+            style={{ fontWeight: 'normal', fontFamily: '"DotGothic16", "ZCOOL KuaiLe", "Zpix", "Silkscreen", monospace' }}
+          >
+            包包王子你好<br />欢迎你进入β星球
           </h1>
-          <p className="mb-10 text-lg font-medium text-purple-800 drop-shadow-sm">
-            你准备好和燕塘公主一起环游世界了吗？
+          <p 
+            className="mb-10 text-base text-[#6d28d9] tracking-[0.05em] drop-shadow-sm"
+            style={{ fontWeight: 'normal', fontFamily: '"DotGothic16", "ZCOOL KuaiLe", "Zpix", "Silkscreen", monospace' }}
+          >
+            你准备好和燕塘公主一起环游 world 了吗？
           </p>
-          <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
-            {/* 主按钮：淡紫色 */}
+          <div className="flex flex-col gap-5 sm:flex-row sm:justify-center mt-2">
+            {/* 主按钮：紫色圆角 */}
             <button
               onClick={() => setHasEntered(true)}
-              className="pixel-card border-4 border-purple-600 bg-purple-500 px-10 py-3 text-lg font-bold tracking-widest text-white shadow-[4px_4px_0_rgba(113,42,179,0.4)] transition-transform hover:translate-x-1 hover:translate-y-1 hover:shadow-none active:bg-purple-600"
+              className="rounded-2xl border-4 border-[#8b5cf6] bg-[#a855f7] px-10 py-3.5 text-lg tracking-[0.2em] text-white shadow-md transition-transform hover:scale-105 active:scale-95"
+              style={{ fontWeight: 'normal', fontFamily: '"Silkscreen", "DotGothic16", "Zpix", monospace' }}
             >
               ENTER
             </button>
-            {/* 副按钮：淡紫色搭配 */}
+            {/* 副按钮：白底紫边 */}
             <button
               onClick={() => alert('燕塘公主正在等你呢，快点 ENTER 吧！')}
-              className="pixel-card border-4 border-purple-200 bg-white/80 px-10 py-3 text-lg font-bold tracking-widest text-purple-600 shadow-[4px_4px_0_rgba(200,180,230,0.4)] transition-transform hover:translate-x-1 hover:translate-y-1 hover:shadow-none active:bg-purple-50"
+              className="rounded-2xl border-4 border-[#e9d5ff] bg-white px-10 py-3.5 text-lg tracking-[0.2em] text-[#a855f7] shadow-md transition-transform hover:scale-105 active:scale-95"
+              style={{ fontWeight: 'normal', fontFamily: '"Silkscreen", "DotGothic16", "Zpix", monospace' }}
             >
               WAIT
             </button>
@@ -1247,6 +1254,7 @@ function App() {
           </nav>
         </header>
 
+
         <AnimatePresence mode="wait">
           <motion.section
             key={activeNav}
@@ -1268,20 +1276,28 @@ function App() {
                     <div className="mb-1 flex items-center justify-between font-medium">
                       <span>爱情EXP</span>
                       <span>
-                        {mapExp.expCount}/{mapExp.unlockedCount}
+                        {openedSpotIds.size}/{mapExp.unlockedCount}
                       </span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full border border-purple-200 bg-purple-50">
                       <motion.div
                         className="h-full bg-gradient-to-r from-purple-300 via-fuchsia-300 to-violet-200"
-                        animate={{ width: `${mapExp.expPercentage}%` }}
+                        animate={{ width: `${openedSpotIds.size > 0 ? Math.floor((openedSpotIds.size / mapExp.unlockedCount) * 100) : 0}%` }}
                         transition={{ duration: 0.35 }}
                       />
                     </div>
                   </div>
                 }
               >
-                <MapModule onExpChange={setMapExp} />
+                <MapModule 
+                  onExpChange={setMapExp} 
+                  openedSpotIds={openedSpotIds} 
+                  setOpenedSpotIds={setOpenedSpotIds}
+                  playAudioGlobal={playAudioGlobal}
+                  toggleGiftAudio={toggleGiftAudio}
+                  toggleBgm={toggleBgm}
+                  playingAudio={playingAudio}
+                />
               </PixelPanel>
             )}
             {activeNav === 'daily' && (
